@@ -2,9 +2,17 @@
   "name": "lavoro",
   "type": "module",
   "version": "0.1.0",
-  "description": "",
+  "description": "A type-safe, flexible queue library for Node.js with support for multiple drivers",
   "author": "Aleksei Ivanov <contact@aleksei.dev>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lexuzieel/lavoro.git"
+  },
+  "homepage": "https://github.com/lexuzieel/lavoro#readme",
+  "bugs": {
+    "url": "https://github.com/lexuzieel/lavoro/issues"
+  },
   "keywords": [
     "queue",
     "background",
@@ -35,7 +43,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "build": "tsup-node",
-    "watch": "tsup --watch"
+    "watch": "tsup --watch",
+    "prepublish": "npm run check && npm run test && npm run build",
+    "release": "npm run prepublish && npm publish"
   },
   "peerDependencies": {
     "pg": "^8.16.3",

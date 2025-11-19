@@ -1,0 +1,28 @@
+# Source files
+src/
+tests/
+
+# Config files
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+.prettierrc
+
+# CI/CD
+.github/
+*.sh
+
+# Development
+coverage/
+node_modules/
+.secrets
+.local/
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.log
+.DS_Store
+
