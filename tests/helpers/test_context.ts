@@ -3,6 +3,7 @@ import {
   Queue,
   QueueConfig,
   QueueConnectionConfig,
+  QueueConnectionName,
   QueueDriverType,
 } from '../../src/index.js'
 import { Job } from '../../src/queue/contracts/job.js'
@@ -33,9 +34,9 @@ export class TestContext {
 
   public queue?: Queue
 
-  private async getConnectionConfig(
+  private async getConnectionsConfig(
     driver: QueueDriverType,
-  ): Promise<QueueConnectionConfig> {
+  ): Promise<Record<QueueConnectionName, QueueConnectionConfig>> {
     switch (driver) {
       case 'postgres':
         logger.debug('Starting PostgreSQL container...')
@@ -47,18 +48,34 @@ export class TestContext {
         logger.debug('PostgreSQL container started')
 
         return {
-          driver: 'postgres',
-          queues: {
-            default: {},
-            'test-queue': { concurrency: 2 },
-            'disabled-queue': { concurrency: 0 },
+          main: {
+            driver: 'postgres',
+            queues: {
+              default: {},
+              'custom-queue': { concurrency: 2 },
+              'disabled-queue': { concurrency: 0 },
+            },
+            config: {
+              host: this.postgresContainer.getHost(),
+              port: this.postgresContainer.getPort(),
+              user: this.postgresContainer.getUsername(),
+              password: this.postgresContainer.getPassword(),
+              database: this.postgresContainer.getDatabase(),
+            },
           },
-          config: {
-            host: this.postgresContainer.getHost(),
-            port: this.postgresContainer.getPort(),
-            user: this.postgresContainer.getUsername(),
-            password: this.postgresContainer.getPassword(),
-            database: this.postgresContainer.getDatabase(),
+          alternative: {
+            driver: 'postgres',
+            queues: {
+              'first-queue': {},
+              'second-queue': {},
+            },
+            config: {
+              host: this.postgresContainer.getHost(),
+              port: this.postgresContainer.getPort(),
+              user: this.postgresContainer.getUsername(),
+              password: this.postgresContainer.getPassword(),
+              database: this.postgresContainer.getDatabase(),
+            },
           },
         }
       default:
@@ -74,9 +91,7 @@ export class TestContext {
     const queueConfig = defineConfig({
       jobs,
       connection: 'main',
-      connections: {
-        main: await this.getConnectionConfig(driver),
-      },
+      connections: await this.getConnectionsConfig(driver),
       ...(config || {}),
     })
 
@@ -123,5 +138,15 @@ export class TestContext {
     afterEach(async () => {
       await this.stopQueue()
     })
+  }
+}
+
+declare module '../../src/queue/contracts/queue_driver.js' {
+  export interface QueuesList
+    extends Record<'default' | 'custom-queue' | 'disabled-queue', never> {}
+
+  export interface ConnectionQueuesMap {
+    main: 'default' | 'custom-queue' | 'disabled-queue'
+    alternative: 'first-queue' | 'second-queue'
   }
 }
