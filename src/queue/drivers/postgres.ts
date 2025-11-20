@@ -94,6 +94,10 @@ export class PostgresQueueDriver extends QueueDriver {
           if (jobClass) {
             const jobInstance = new jobClass()
 
+            jobInstance.connection = this.connection
+            jobInstance.queue = queue
+            jobInstance.id = job.id
+
             await jobInstance.handle(job.data)
 
             this.logger.trace(

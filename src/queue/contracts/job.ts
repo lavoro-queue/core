@@ -13,6 +13,8 @@ export type Options = {
 }
 
 export abstract class Job<P = unknown> {
+  private _id?: string
+
   public options: Options = {
     retries: 3,
     delay: 0,
@@ -27,8 +29,32 @@ export abstract class Job<P = unknown> {
     return { queue: q, name: n }
   }
 
+  public get connection(): QueueConnectionName | undefined {
+    return this.options.connection
+  }
+
+  public set connection(connection: QueueConnectionName | undefined) {
+    this.options.connection = connection
+  }
+
+  public get queue(): QueueName | undefined {
+    return this.options.queue
+  }
+
+  public set queue(queue: QueueName | undefined) {
+    this.options.queue = queue
+  }
+
   public get name(): string {
     return this.constructor.name
+  }
+
+  public get id(): string | undefined {
+    return this._id
+  }
+
+  public set id(id: string | undefined) {
+    this._id = id
   }
 
   public get fullyQualifiedName(): string {
@@ -36,7 +62,7 @@ export abstract class Job<P = unknown> {
       throw new Error('Queue is not set.')
     }
 
-    return Job.compileName(this.options.queue, this.constructor.name)
+    return Job.compileName(this.options.queue, this.name)
   }
 
   private static defaultQueueServiceResolver: () => Promise<Queue>
