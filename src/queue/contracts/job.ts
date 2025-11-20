@@ -1,13 +1,11 @@
 import { PendingDispatch } from '../pending_dispatch.js'
 import { Queue } from '../queue.js'
-import { QueueConnectionName } from '../types.js'
-import { QueueName } from './queue_driver.js'
 
 export type Payload<T extends Job> = T extends Job<infer P> ? P : unknown
 
 export type Options = {
-  connection?: QueueConnectionName
-  queue?: QueueName
+  connection?: string
+  queue?: string
   retries: number
   delay: number
 }
@@ -29,19 +27,19 @@ export abstract class Job<P = unknown> {
     return { queue: q, name: n }
   }
 
-  public get connection(): QueueConnectionName | undefined {
+  public get connection(): string | undefined {
     return this.options.connection
   }
 
-  public set connection(connection: QueueConnectionName | undefined) {
+  public set connection(connection: string | undefined) {
     this.options.connection = connection
   }
 
-  public get queue(): QueueName | undefined {
+  public get queue(): string | undefined {
     return this.options.queue
   }
 
-  public set queue(queue: QueueName | undefined) {
+  public set queue(queue: string | undefined) {
     this.options.queue = queue
   }
 
