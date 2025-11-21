@@ -6,14 +6,40 @@ import {
 import { ScheduleRegistry } from './schedule_registry.js'
 import { MaybePromise } from './types.js'
 
+import { Verrou } from '@verrou/core'
+import { Duration } from '@verrou/core/types'
 import { Cron } from 'croner'
+import { createHash } from 'node:crypto'
+
+export const getDistributedLockKey = (name: string) => {
+  const hash = createHash('sha1').update(name).digest('hex').slice(0, 8)
+  return `lavoro:schedule:${hash}`
+}
 
 export class PendingSchedule {
   private cronPattern?: string
 
+  private distributedLockOptions: {
+    /**
+     * The lock key is based on the task name to ensure only one instance runs
+     *
+     * @param name - The task name
+     * @returns The lock key
+     */
+    key: (name: string) => string
+    /**
+     * The lock TTL is the duration for which the lock is held
+     */
+    ttl: Duration
+  } = {
+    key: getDistributedLockKey,
+    ttl: '10s',
+  }
+
   constructor(
     private name: string,
     private cb: () => MaybePromise<void>,
+    private verrou: Verrou<any>,
   ) {}
 
   /**
@@ -63,7 +89,36 @@ export class PendingSchedule {
     ScheduleRegistry.add(
       this.name,
       new Cron(this.cronPattern, async () => {
-        await this.cb()
+        // First, we create a distributed lock based on the task name,
+        // which ensures that only one instance of the task runs at a time.
+        const key = this.distributedLockOptions.key(this.name)
+        const ttl = this.distributedLockOptions.ttl
+
+        const lock = this.verrou.createLock(key, ttl)
+
+        try {
+          // Before running the task, we try to acquire the lock.
+          const acquired = await lock.acquire()
+
+          // If the lock was acquired, we run
+          // the task and always release the lock.
+          if (acquired) {
+            try {
+              await this.cb()
+            } finally {
+              await lock.release()
+            }
+          }
+
+          // If the lock wasn't acquired, it means another
+          // instance is running this task, so we skip it.
+        } catch (error) {
+          try {
+            await lock.release()
+          } finally {
+            throw error
+          }
+        }
       }),
     )
   }
