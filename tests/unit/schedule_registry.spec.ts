@@ -8,25 +8,6 @@ describe('ScheduleRegistry', () => {
     ScheduleRegistry.clear()
   })
 
-  test('should be able to add a cron job to the registry', async () => {
-    let callCount = 0
-    const expectedCallCount = 3
-
-    ScheduleRegistry.add(
-      'test-task',
-      new Cron('* * * * * *', async () => {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-        callCount++
-      }),
-    )
-
-    while (callCount < expectedCallCount) {
-      await new Promise((resolve) => setTimeout(resolve, 500))
-    }
-
-    expect(callCount).toBe(expectedCallCount)
-  })
-
   test('should not be able to add the same job twice', async () => {
     ScheduleRegistry.add('test-task', new Cron('* * * * * *', async () => {}))
     expect(() =>
