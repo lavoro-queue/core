@@ -90,13 +90,9 @@ describe('Schedule', () => {
       callCount++
     }).every('second')
 
-    let start = Date.now()
-
     while (callCount < 1) {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
-
-    let duration = Date.now() - start
 
     // Should run only once since we are not overlapping
     expect(callCount).toBe(1)
@@ -112,13 +108,9 @@ describe('Schedule', () => {
       callCount++
     }).every('second')
 
-    start = Date.now()
-
     while (callCount < 3) {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
-
-    duration = Date.now() - start
 
     // Should run at least 3 times since we are not
     // overlapping but the task takes less than 1 second
@@ -137,13 +129,9 @@ describe('Schedule', () => {
       .every('second')
       .overlapping()
 
-    start = Date.now()
-
     while (callCount < 3) {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
-
-    duration = Date.now() - start
 
     // Should run at least 3 times since we are overlapping
     expect(callCount).toBeGreaterThanOrEqual(3)
