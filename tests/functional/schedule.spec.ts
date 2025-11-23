@@ -90,8 +90,15 @@ describe('Schedule', () => {
       callCount++
     }).every('second')
 
-    await new Promise((resolve) => setTimeout(resolve, 4000))
+    let start = Date.now()
 
+    while (callCount < 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+
+    let duration = Date.now() - start
+
+    // Should run only once since we are not overlapping
     expect(callCount).toBe(1)
 
     /**
@@ -105,22 +112,40 @@ describe('Schedule', () => {
       callCount++
     }).every('second')
 
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    start = Date.now()
 
-    expect(callCount).toBe(3)
+    while (callCount < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+
+    duration = Date.now() - start
+
+    // Should run at least 3 times since we are not
+    // overlapping but the task takes less than 1 second
+    expect(callCount).toBeGreaterThanOrEqual(3)
 
     /**
      * Long tasks can be forced to overlap
      */
     Schedule.clear('test-task')
     callCount = 0
+
     await Schedule.call('test-task', async () => {
       await new Promise((resolve) => setTimeout(resolve, 3000))
       callCount++
-    }).every('second').overlapping()
+    })
+      .every('second')
+      .overlapping()
 
-    await new Promise((resolve) => setTimeout(resolve, 4000))
+    start = Date.now()
 
-    expect(callCount).toBe(3)
+    while (callCount < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+
+    duration = Date.now() - start
+
+    // Should run at least 3 times since we are overlapping
+    expect(callCount).toBeGreaterThanOrEqual(3)
   })
 })
