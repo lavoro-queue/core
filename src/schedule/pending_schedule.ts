@@ -9,7 +9,7 @@ import {
 import { ScheduleRegistry } from './schedule_registry.js'
 import { MaybePromise } from './types.js'
 
-import { Verrou } from '@verrou/core'
+import type { LockFactory } from '@verrou/core'
 import { Duration } from '@verrou/core/types'
 import { Cron } from 'croner'
 import { createHash } from 'node:crypto'
@@ -37,15 +37,20 @@ export class PendingSchedule {
      * The lock TTL is the duration for which the lock is held
      */
     ttl: Duration
+    /**
+     * Whether to allow overlapping executions of the same task
+     */
+    overlap: boolean
   } = {
     key: getDistributedLockKey,
     ttl: '10s',
+    overlap: false,
   }
 
   constructor(
     protected name: string,
     protected cb: () => MaybePromise<void>,
-    protected verrou: Verrou<any>,
+    protected lockServiceResolver: () => LockFactory,
   ) {}
 
   /**
@@ -134,6 +139,34 @@ export class PendingSchedule {
     return this
   }
 
+  /**
+   * Set the duration during which other instances
+   * of the same task will be prevented from running.
+   *
+   * This should be roughly the duration of the task execution or longer
+   * since the lock will be released automatically after the task execution.
+   *
+   * @param ttl - The lock duration
+   *
+   * @example
+   * Schedule.call('my-task', () => {}).lockFor('10s')
+   */
+  public lockFor(ttl: Duration): this {
+    this.distributedLockOptions.ttl = ttl
+    return this
+  }
+
+  /**
+   * Allow overlapping executions of the same task.
+   *
+   * @example
+   * Schedule.call('my-task', () => {}).overlapping()
+   */
+  public overlapping(): this {
+    this.distributedLockOptions.overlap = true
+    return this
+  }
+
   protected async execute(): Promise<void> {
     if (!this.cronPattern) {
       throw new Error(
@@ -144,12 +177,19 @@ export class PendingSchedule {
     ScheduleRegistry.add(
       this.name,
       new Cron(this.cronPattern, async () => {
+        // If overlapping is allowed, we can call the callback right away.
+        if (this.distributedLockOptions.overlap) {
+          return await this.cb()
+        }
+
         // First, we create a distributed lock based on the task name,
         // which ensures that only one instance of the task runs at a time.
         const key = this.distributedLockOptions.key(this.name)
         const ttl = this.distributedLockOptions.ttl
 
-        const lock = this.verrou.createLock(key, ttl)
+        // Resolve lock service instance at execution time
+        const lockService = this.lockServiceResolver()
+        const lock = lockService.createLock(key, ttl)
 
         try {
           // Before running the task, we try to acquire the lock.

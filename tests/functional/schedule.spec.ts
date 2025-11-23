@@ -78,4 +78,49 @@ describe('Schedule', () => {
     expect(duration).toBeGreaterThan(2000)
     expect(duration).toBeLessThan(4000)
   })
+
+  test('should not overlap unless explicitly allowed', async () => {
+    let callCount = 0
+
+    /**
+     * Long tasks should not overlap
+     */
+    await Schedule.call('test-task', async () => {
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+      callCount++
+    }).every('second')
+
+    await new Promise((resolve) => setTimeout(resolve, 4000))
+
+    expect(callCount).toBe(1)
+
+    /**
+     * Short tasks also do not overlap, but since they
+     * take less than 1 second this is not noticeable.
+     */
+    Schedule.clear('test-task')
+    callCount = 0
+
+    await Schedule.call('test-task', async () => {
+      callCount++
+    }).every('second')
+
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+
+    expect(callCount).toBe(3)
+
+    /**
+     * Long tasks can be forced to overlap
+     */
+    Schedule.clear('test-task')
+    callCount = 0
+    await Schedule.call('test-task', async () => {
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+      callCount++
+    }).every('second').overlapping()
+
+    await new Promise((resolve) => setTimeout(resolve, 4000))
+
+    expect(callCount).toBe(3)
+  })
 })

@@ -10,4 +10,4 @@ export { QueueDriver } from './queue/contracts/queue_driver.js'
 export { MemoryQueueDriver } from './queue/drivers/memory.js'
 export { PostgresQueueDriver } from './queue/drivers/postgres.js'
 
-export { PendingDispatch } from './queue/pending_dispatch.js'
+export { Schedule } from './schedule/schedule.js'

@@ -8,6 +8,7 @@ import {
 } from '../../src/index.js'
 import { Job } from '../../src/queue/contracts/job.js'
 import { defineConfig } from '../../src/queue/define_config.js'
+import { PostgresConfig } from '../../src/queue/drivers/postgres.js'
 
 import {
   PostgreSqlContainer,
@@ -32,7 +33,33 @@ export const logger = pino({
 export class TestContext {
   private postgresContainer?: StartedPostgreSqlContainer
 
-  public queue?: Queue
+  public getPostgres(): StartedPostgreSqlContainer {
+    if (!this.postgresContainer) {
+      throw new Error('PostgreSQL container not started')
+    }
+
+    return this.postgresContainer
+  }
+
+  public getPostgresConfig(): PostgresConfig {
+    return {
+      host: this.getPostgres().getHost(),
+      port: this.getPostgres().getPort(),
+      user: this.getPostgres().getUsername(),
+      password: this.getPostgres().getPassword(),
+      database: this.getPostgres().getDatabase(),
+    }
+  }
+
+  private queue?: Queue
+
+  public getQueue(): Queue {
+    if (!this.queue) {
+      throw new Error('Queue has not been initialized')
+    }
+
+    return this.queue
+  }
 
   private async getConnectionsConfig(
     driver: QueueDriverType,
@@ -88,6 +115,10 @@ export class TestContext {
     driver: QueueDriverType,
     config?: Partial<QueueConfig>,
   ) {
+    if (this.queue) {
+      await this.stopQueue()
+    }
+
     const queueConfig = defineConfig({
       jobs,
       connection: 'main',
@@ -95,8 +126,10 @@ export class TestContext {
       ...(config || {}),
     })
 
-    this.queue = new Queue({ ...queueConfig, logger: new Logger(logger) })
-    Job.setDefaultQueueServiceResolver(() => Promise.resolve(this.queue!))
+    const queue = new Queue({ ...queueConfig, logger: new Logger(logger) })
+    Job.setDefaultQueueServiceResolver(() => Promise.resolve(queue))
+
+    return queue
   }
 
   async teardownPostgres() {
@@ -124,11 +157,12 @@ export class TestContext {
     config?: Partial<QueueConfig>,
   ) {
     beforeAll(async () => {
-      await this.setupQueue(jobs, driver, config)
+      this.queue = await this.setupQueue(jobs, driver, config)
     })
 
     afterAll(async () => {
       await this.teardownPostgres()
+      this.queue = undefined
     })
 
     beforeEach(async () => {

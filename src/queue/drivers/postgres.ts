@@ -6,6 +6,9 @@ import {
   WorkerOptions,
 } from '../types.js'
 
+import { LockFactory } from '@verrou/core'
+import { knexStore } from '@verrou/core/drivers/knex'
+import knex from 'knex'
 import { PgBoss } from 'pg-boss'
 
 export type PostgresConfig = {
@@ -18,6 +21,9 @@ export type PostgresConfig = {
 
 export class PostgresQueueDriver extends QueueDriver {
   private boss: PgBoss
+  private postgresConfig: PostgresQueueConnectionConfig['config']
+  private lockProviderKnexInstance?: ReturnType<typeof knex>
+  private lockProviderTableName: string = 'lavoro_locks'
 
   constructor(
     queueConfig: QueueConfig,
@@ -26,9 +32,41 @@ export class PostgresQueueDriver extends QueueDriver {
   ) {
     super(queueConfig, options)
 
+    this.postgresConfig = config
+
     this.boss = new PgBoss({
       connectionString: `postgresql://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`,
     })
+  }
+
+  public createLockProvider() {
+    const knexInstance = knex({
+      client: 'pg',
+      connection: {
+        host: this.postgresConfig.host,
+        port: Number(this.postgresConfig.port),
+        user: this.postgresConfig.user,
+        password: this.postgresConfig.password,
+        database: this.postgresConfig.database,
+      },
+    })
+
+    this.lockProviderKnexInstance = knexInstance
+
+    return new LockFactory(
+      knexStore({
+        connection: knexInstance,
+        autoCreateTable: true,
+        tableName: this.lockProviderTableName,
+      }).factory(),
+    )
+  }
+
+  public async destroyLockProvider(_lockProvider: LockFactory): Promise<void> {
+    if (this.lockProviderKnexInstance) {
+      await this.lockProviderKnexInstance.destroy()
+      this.lockProviderKnexInstance = undefined
+    }
   }
 
   /**

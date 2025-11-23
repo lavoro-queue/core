@@ -2,6 +2,8 @@ import { Logger, createDefaultLogger } from '../../logger.js'
 import { QueueConfig, QueueConnectionName, WorkerOptions } from '../types.js'
 import { Job, Payload } from './job.js'
 
+import type { LockFactory } from '@verrou/core'
+
 /**
  * Interface to be augmented by users to define their queue names.
  * This enables type-safe queue names throughout the application.
@@ -195,5 +197,27 @@ export abstract class QueueDriver {
     this.checkIfJobIsRegistered(job.name)
 
     return Promise.resolve()
+  }
+
+  /**
+   * Create a lock provider instance for this driver.
+   *
+   * Each driver implementation should return a
+   * [Verrou LockFactory instance](https://verrou.dev/docs/quick-setup#lockfactory-api)
+   * that matches the driver's backing store.
+   *
+   * @returns A LockFactory instance
+   */
+  public abstract createLockProvider(): LockFactory
+
+  /**
+   * Clean up resources associated with a lock provider created by this driver.
+   * This is called when the queue is stopped to ensure proper resource cleanup.
+   *
+   * @param lockProvider - The lock provider instance to clean up
+   */
+  public async destroyLockProvider(_lockProvider: LockFactory): Promise<void> {
+    // Default implementation does nothing
+    // Drivers that need cleanup (e.g., Postgres with Knex) should override this
   }
 }

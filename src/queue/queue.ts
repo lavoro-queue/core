@@ -10,11 +10,14 @@ import type {
   QueueConnectionName,
 } from './types.js'
 
+import type { LockFactory } from '@verrou/core'
+
 export class Queue {
   private drivers: Map<QueueConnectionName, QueueDriver> = new Map()
   private started: boolean = false
   private logger: Logger
   private scheduledJobs: Set<string> = new Set()
+  private lockProviders: Map<QueueConnectionName, LockFactory> = new Map()
 
   constructor(private config: QueueConfig & { logger?: Logger }) {
     this.logger = config?.logger || createDefaultLogger('queue')
@@ -31,6 +34,24 @@ export class Queue {
       driver.connection = connection as QueueConnectionName
 
       this.drivers.set(driver.connection, driver)
+
+      /**
+       * Create driver-specific lock provider if
+       * no provider was explicitly configured.
+       */
+      if (!driverConfig.lockProvider) {
+        const lockProvider = driver.createLockProvider()
+        if (lockProvider) {
+          this.lockProviders.set(
+            connection as QueueConnectionName,
+            lockProvider,
+          )
+          this.logger.trace(
+            { connection, driver: driverConfig.driver },
+            'Created driver-specific lock provider',
+          )
+        }
+      }
     }
   }
 
@@ -111,6 +132,26 @@ export class Queue {
       await driver.stop()
     }
 
+    /**
+     * Destroy the lock provider for each connection, for example if the driver
+     * is using a database, the driver might need to destroy the database connection.
+     */
+    for (const [connection, lockProvider] of this.lockProviders) {
+      const driver = this.drivers.get(connection)
+      if (driver) {
+        try {
+          await driver.destroyLockProvider(lockProvider)
+        } catch (error) {
+          this.logger.warn(
+            { connection, error },
+            'Error destroying lock provider',
+          )
+        }
+      }
+    }
+
+    this.lockProviders.clear()
+
     this.logger.trace('Queue service stopped')
   }
 
@@ -153,6 +194,46 @@ export class Queue {
     }
 
     await driver.enqueue(job, payload)
+  }
+
+  /**
+   * Get the default connection name.
+   *
+   * Returns the name of the first available connection.
+   * Throws an error if no connections are available.
+   */
+  public getDefaultConnection(): QueueConnectionName {
+    if (this.drivers.size === 0) {
+      throw new Error(`No queue drivers available.`)
+    }
+
+    return this.drivers.keys().next().value as QueueConnectionName
+  }
+
+  /**
+   * Get the lock provider instance for a specific connection.
+   * Returns the configured lock provider, or auto-created one based on driver.
+   * Throws an error if no lock provider is available.
+   *
+   * @param connection - The connection name
+   * @returns The lock provider instance
+   */
+  public getLockProvider(connection: QueueConnectionName): LockFactory {
+    const connectionConfig = this.config.connections[connection]
+
+    // Return explicitly configured lock provider if available
+    if (connectionConfig?.lockProvider) {
+      return connectionConfig.lockProvider
+    }
+
+    // Return auto-created lock provider if available
+    const lockProvider = this.lockProviders.get(connection)
+
+    if (!lockProvider) {
+      throw new Error(`No lock provider found for connection: ${connection}.`)
+    }
+
+    return lockProvider
   }
 
   /**

