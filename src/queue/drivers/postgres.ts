@@ -190,7 +190,7 @@ export class PostgresQueueDriver extends QueueDriver {
               // Release the lock after job completes
               if (restoredLock) {
                 try {
-                  await restoredLock.release()
+                  await restoredLock.forceRelease()
                   this.logger.trace(
                     { job: name, id: job.id, lock: restoredLock.serialize() },
                     'Released lock for scheduled job',

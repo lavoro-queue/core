@@ -226,13 +226,12 @@ export class PendingSchedule {
             // await lock.release()
           } else {
             await this.cb()
-            await lock.release()
+            await lock.forceRelease()
           }
         } catch (error) {
-          // console.log(error)
           // If the task callback failed, we release
           // the lock and re-throw the error.
-          await lock.release()
+          await lock.forceRelease()
           throw error
         } finally {
           // await lock.release()

@@ -234,7 +234,7 @@ export class Queue {
     const lockFactory = this.lockFactories.get(connection)
 
     if (!lockFactory) {
-      throw new Error(`No lock factory found for connection: ${connection}.`)
+      throw new Error(`No lock provider found for connection: ${connection}.`)
     }
 
     return lockFactory
