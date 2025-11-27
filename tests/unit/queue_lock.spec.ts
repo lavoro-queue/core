@@ -33,6 +33,8 @@ describe('Queue Lock Service', () => {
   })
 
   test('should automatically create lock service for every connection', async () => {
+    const customLockProvider = new LockFactory(memoryStore().factory())
+    
     const queueConfig = defineConfig({
       jobs: [TestJob],
       connection: 'main',
@@ -48,14 +50,29 @@ describe('Queue Lock Service', () => {
           queues: {
             default: {},
           },
+          lockProvider: customLockProvider,
         },
       },
     })
 
     const queue = new Queue(queueConfig)
 
+    // getLockProvider should throw an error if the queue is not started
+    // unless it is explicitly configured in the connection config
+    expect(() => queue.getLockProvider('main')).toThrow()
+    expect(() => queue.getLockProvider('alternative')).not.toThrow()
+
+    await queue.start()
+
+    // getLockProvider should return driver specific lock provider or
+    // the one explicitly configured in the connection config
     expect(() => queue.getLockProvider('main')).not.toThrow()
     expect(() => queue.getLockProvider('alternative')).not.toThrow()
+
+    expect(queue.getLockProvider('main')).not.toBe(customLockProvider)
+    expect(queue.getLockProvider('alternative')).toBe(customLockProvider)
+
+    await queue.stop()
   })
 
   test('should use explicitly configured lock service for connection', async () => {

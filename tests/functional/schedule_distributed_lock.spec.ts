@@ -34,7 +34,7 @@ describe('Schedule (distributed locking)', () => {
       executionCount++
     }).every('second')
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 2000))
 
     expect(executionCount).toBe(0)
 
@@ -46,7 +46,7 @@ describe('Schedule (distributed locking)', () => {
       executionCount++
     }).every('second')
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 1500))
 
     expect(executionCount).toBeGreaterThanOrEqual(1)
   })
