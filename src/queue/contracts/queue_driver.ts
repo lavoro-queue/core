@@ -133,7 +133,7 @@ export abstract class QueueDriver {
 
     this.logger.trace(
       { connection: this.connection, queue, options: workerOptions },
-      'Listening to queue',
+      'Listening queue',
     )
   }
 
