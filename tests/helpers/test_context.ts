@@ -8,6 +8,7 @@ import {
   Schedule,
 } from '../../src/index.js'
 import { Job } from '../../src/queue/contracts/job.js'
+import { QueueDriverStopOptions } from '../../src/queue/contracts/queue_driver.js'
 import { defineConfig } from '../../src/queue/define_config.js'
 import { PostgresConfig } from '../../src/queue/drivers/postgres.js'
 
@@ -16,6 +17,7 @@ import {
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql'
 import dotenv from 'dotenv'
+import { PgBoss, QueueResult } from 'pg-boss'
 import pino from 'pino'
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest'
 
@@ -87,6 +89,17 @@ export class TestContext {
     return this.queue
   }
 
+  public async getPgBossStats(
+    connection: QueueConnectionName,
+    queue: string,
+    job: new () => Job,
+  ): Promise<QueueResult> {
+    const driver = (this.getQueue() as any).drivers.get(connection)
+    const boss = (driver as any).boss as PgBoss
+
+    return await boss.getQueueStats(Job.compileName(queue, job.name))
+  }
+
   private async getConnectionsConfig(
     driver: QueueDriverType,
   ): Promise<Record<QueueConnectionName, QueueConnectionConfig>> {
@@ -156,8 +169,8 @@ export class TestContext {
     await this.queue?.start()
   }
 
-  async stopQueue() {
-    await this.queue?.stop()
+  async stopQueue(options?: QueueDriverStopOptions) {
+    await this.queue?.stop(options)
   }
 
   /**
@@ -184,8 +197,8 @@ export class TestContext {
 
     afterEach(async () => {
       Schedule.clear()
-      await this.stopQueue()
-    })
+      await this.stopQueue({ timeout: 30000 })
+    }, 30000)
   }
 }
 

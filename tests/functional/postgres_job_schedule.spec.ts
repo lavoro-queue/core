@@ -7,6 +7,8 @@ import { describe, expect, test } from 'vitest'
 
 let jobRuns = 0
 
+const PG_BOSS_POLLING = 2000
+
 class TestJob extends Job {
   public async handle(payload: { arg1: string; arg2: number }): Promise<void> {
     logger.info({ payload }, 'Running test job...')
@@ -17,7 +19,7 @@ class TestJob extends Job {
 }
 
 class LongRunningJob extends Job {
-  public static duration = 4000 // should be higher than pg-boss polling interval
+  public static duration = 8000 // should be higher than pg-boss polling interval
 
   public async handle(_payload: unknown): Promise<void> {
     logger.info('Running long running job...')
@@ -67,15 +69,52 @@ describe(
       await new Promise((resolve) =>
         setTimeout(
           resolve,
-          expectedJobRuns * (2000 + LongRunningJob.duration) + 100,
+          expectedJobRuns * (PG_BOSS_POLLING + LongRunningJob.duration),
         ),
+      )
+
+      Schedule.clear()
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, PG_BOSS_POLLING + LongRunningJob.duration),
       )
 
       expect(jobRuns).toBe(expectedJobRuns)
 
-      // TODO: Get actual scheduled job count from pg-boss
-      // which should be equal to the expectedJobRuns.
-      // It is implemented, however not properly tested.
+      const stats = await ctx.getPgBossStats('main', 'default', LongRunningJob)
+
+      expect(stats.totalCount).toBe(expectedJobRuns)
+    })
+
+    test('should overlap if explicitly allowed', async () => {
+      jobRuns = 0
+
+      await Schedule.job(LongRunningJob, {})
+        .onQueue('high-throughput') // queue that processes many jobs in parallel
+        .every('second')
+        .overlapping()
+
+      const expectedJobRuns = Math.ceil(LongRunningJob.duration / 1000)
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, LongRunningJob.duration),
+      )
+
+      Schedule.clear()
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, PG_BOSS_POLLING + LongRunningJob.duration),
+      )
+
+      expect(jobRuns).toBe(expectedJobRuns)
+
+      const stats = await ctx.getPgBossStats(
+        'main',
+        'high-throughput',
+        LongRunningJob,
+      )
+
+      expect(stats.totalCount).toBe(jobRuns)
     })
   },
 )
