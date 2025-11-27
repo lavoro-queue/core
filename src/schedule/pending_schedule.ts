@@ -205,11 +205,6 @@ export class PendingSchedule {
 
         const acquired = await lock.acquireImmediately()
 
-        console.log({
-          'acquired in scheduler': acquired,
-          lock: lock.serialize(),
-        })
-
         if (!acquired) {
           return
         }
