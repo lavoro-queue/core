@@ -1,5 +1,7 @@
 import { Job } from './contracts/job.js'
 
+import type { LockFactory } from '@lavoro/verrou'
+
 export type WorkerOptions = {
   concurrency?: number
 }
@@ -12,6 +14,14 @@ type BaseQueueConnectionConfig = {
    * List of queue names with their options for this connection
    */
   queues: Record<string, WorkerOptions>
+
+  /**
+   * Optional lock provider (LockFactory instance) for distributed locking.
+   *
+   * If not provided, a lock provider will be automatically created
+   * based on the connection driver.
+   */
+  lockProvider?: LockFactory
 }
 
 /**

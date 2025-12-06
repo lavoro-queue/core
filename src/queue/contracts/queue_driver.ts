@@ -2,6 +2,8 @@ import { Logger, createDefaultLogger } from '../../logger.js'
 import { QueueConfig, QueueConnectionName, WorkerOptions } from '../types.js'
 import { Job, Payload } from './job.js'
 
+import type { LockFactory } from '@lavoro/verrou'
+
 /**
  * Interface to be augmented by users to define their queue names.
  * This enables type-safe queue names throughout the application.
@@ -70,6 +72,22 @@ export type QueueName = keyof QueuesList extends never
 export type QueueNameForConnection<C extends QueueConnectionName> =
   C extends keyof ConnectionQueuesMap ? ConnectionQueuesMap[C] : QueueName
 
+export type QueueDriverStopOptions = {
+  /**
+   * Whether to wait for the jobs to finish processing before stopping.
+   *
+   * Default: true
+   */
+  graceful?: boolean
+
+  /**
+   * The timeout in milliseconds to wait for the jobs to finish processing.
+   *
+   * Default: 30000 (30 seconds)
+   */
+  timeout?: number
+}
+
 export abstract class QueueDriver {
   protected logger: Logger
 
@@ -115,7 +133,7 @@ export abstract class QueueDriver {
 
     this.logger.trace(
       { connection: this.connection, queue, options: workerOptions },
-      'Listening to queue',
+      'Listening queue',
     )
   }
 
@@ -151,7 +169,7 @@ export abstract class QueueDriver {
     }
   }
 
-  public async stop(): Promise<void> {
+  public async stop(_options?: QueueDriverStopOptions): Promise<void> {
     this.registeredQueues.clear()
     this.registeredJobs.clear()
   }
@@ -195,5 +213,27 @@ export abstract class QueueDriver {
     this.checkIfJobIsRegistered(job.name)
 
     return Promise.resolve()
+  }
+
+  /**
+   * Create a lock factory instance for this driver.
+   *
+   * Each driver implementation should return a
+   * [Verrou LockFactory instance](https://verrou.dev/docs/quick-setup#lockfactory-api)
+   * that matches the driver's backing store.
+   *
+   * @returns A LockFactory instance
+   */
+  public abstract createLockProvider(): LockFactory
+
+  /**
+   * Clean up resources associated with a lock factory created by this driver.
+   * This is called when the queue is stopped to ensure proper resource cleanup.
+   *
+   * @param lockFactory - The lock factory instance to clean up
+   */
+  public async destroyLockProvider(_lockFactory: LockFactory): Promise<void> {
+    // Default implementation does nothing
+    // Drivers that need cleanup (e.g., Postgres with Knex) should override this
   }
 }

@@ -61,7 +61,9 @@
     "@types/node": "^24.10.0",
     "@vitest/coverage-v8": "^4.0.10",
     "@vitest/ui": "^4.0.10",
+    "cron-parser": "^5.4.0",
     "dotenv": "^16.6.1",
+    "knex": "^3.1.0",
     "nodemon": "^3.1.11",
     "p-defer": "^4.0.1",
     "pino-pretty": "^13.1.2",
@@ -71,5 +73,10 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.10"
+  },
+  "dependencies": {
+    "@lavoro/verrou": "^0.5.2",
+    "@lukeed/ms": "^2.0.2",
+    "croner": "^9.1.0"
   }
 }
