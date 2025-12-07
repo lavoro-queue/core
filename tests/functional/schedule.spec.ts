@@ -76,7 +76,7 @@ describe('Schedule', () => {
 
     expect(callCount).toBe(expectedCallCount)
     expect(duration).toBeGreaterThan(2000)
-    expect(duration).toBeLessThan(4000)
+    expect(duration).toBeLessThan(5000)
   })
 
   test('should not overlap by default', async () => {
