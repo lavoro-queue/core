@@ -2,15 +2,21 @@ import {
   Logger,
   Queue,
   QueueConfig,
-  QueueConnectionConfig,
   QueueConnectionName,
-  QueueDriverType,
+  QueueDriverConstructor,
   Schedule,
+  postgres,
 } from '../../src/index.js'
 import { Job } from '../../src/queue/contracts/job.js'
-import { QueueDriverStopOptions } from '../../src/queue/contracts/queue_driver.js'
+import {
+  QueueDriver,
+  QueueDriverStopOptions,
+} from '../../src/queue/contracts/queue_driver.js'
 import { defineConfig } from '../../src/queue/define_config.js'
-import { PostgresConfig } from '../../src/queue/drivers/postgres.js'
+import {
+  PostgresConfig,
+  PostgresQueueDriver,
+} from '../../src/queue/drivers/postgres.js'
 
 import {
   PostgreSqlContainer,
@@ -100,39 +106,38 @@ export class TestContext {
     return await boss.getQueueStats(Job.compileName(queue, job.name))
   }
 
-  private async getConnectionsConfig(
-    driver: QueueDriverType,
-  ): Promise<Record<QueueConnectionName, QueueConnectionConfig>> {
-    switch (driver) {
-      case 'postgres':
-        logger.debug('Starting PostgreSQL container...')
+  private async getConnectionsConfig<D extends QueueDriver>(
+    driver: QueueDriverConstructor<D>,
+  ): Promise<Record<QueueConnectionName, any>> {
+    if (driver === (PostgresQueueDriver as any)) {
+      logger.debug('Starting PostgreSQL container...')
 
-        this.postgresContainer = await new PostgreSqlContainer(
-          'postgres:16-alpine',
-        ).start()
+      this.postgresContainer = await new PostgreSqlContainer(
+        'postgres:16-alpine',
+      ).start()
 
-        logger.debug('PostgreSQL container started')
+      logger.debug('PostgreSQL container started')
 
-        return {
-          main: {
-            driver: 'postgres',
-            queues: connections.main.queues,
-            config: this.getPostgresConfig(),
-          },
-          alternative: {
-            driver: 'postgres',
-            queues: connections.alternative.queues,
-            config: this.getPostgresConfig(),
-          },
-        }
-      default:
-        throw new Error(`Unsupported driver: ${driver}`)
+      const pgConfig = this.getPostgresConfig()
+
+      return {
+        main: {
+          driver: postgres(pgConfig),
+          queues: connections.main.queues,
+        },
+        alternative: {
+          driver: postgres(pgConfig),
+          queues: connections.alternative.queues,
+        },
+      }
     }
+
+    throw new Error(`Unsupported driver: ${driver}`)
   }
 
-  async setupQueue(
+  async setupQueue<D extends QueueDriver>(
     jobs: (new () => Job)[] = [],
-    driver: QueueDriverType,
+    driver: QueueDriverConstructor<D>,
     config?: Partial<QueueConfig>,
   ) {
     if (this.queue) {
@@ -176,9 +181,9 @@ export class TestContext {
   /**
    * Setup lifecycle hooks for vitest
    */
-  setup(
+  setup<D extends QueueDriver>(
     jobs: (new () => Job)[] = [],
-    driver: QueueDriverType,
+    driver: QueueDriverConstructor<D>,
     config?: Partial<QueueConfig>,
   ) {
     beforeAll(async () => {

@@ -1,4 +1,5 @@
 import { Job } from '../../src/queue/contracts/job.js'
+import { PostgresQueueDriver } from '../../src/queue/drivers/postgres.js'
 import { Schedule } from '../../src/schedule/schedule.js'
 import { TestContext, logger } from '../helpers/test_context.js'
 
@@ -37,7 +38,7 @@ describe(
   () => {
     const ctx = new TestContext()
 
-    ctx.setup([TestJob, LongRunningJob], 'postgres', {
+    ctx.setup([TestJob, LongRunningJob], PostgresQueueDriver, {
       worker: true,
     })
 

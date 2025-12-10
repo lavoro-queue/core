@@ -4,6 +4,7 @@
 // import { Schedule } from '../../src/schedule/schedule.js'
 // import { TestContext } from '../helpers/test_context.js'
 import { Job } from '../../src/index.js'
+import { PostgresQueueDriver } from '../../src/queue/drivers/postgres.js'
 
 import { TestContext } from '#tests/helpers/test_context'
 import knex from 'knex'
@@ -21,7 +22,7 @@ class TestJob extends Job {
 describe('Queue lock provider (PostgreSQL)', () => {
   const ctx = new TestContext()
 
-  ctx.setup([TestJob], 'postgres')
+  ctx.setup([TestJob], PostgresQueueDriver)
 
   test('should use postgres lock provider for connection', async () => {
     const queue = ctx.getQueue()

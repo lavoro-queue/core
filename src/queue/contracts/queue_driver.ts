@@ -88,23 +88,25 @@ export type QueueDriverStopOptions = {
   timeout?: number
 }
 
-export abstract class QueueDriver {
+export type QueueDriverConfig = {}
+
+export abstract class QueueDriver<
+  Config extends QueueDriverConfig = QueueDriverConfig,
+> {
   protected logger: Logger
 
   protected registeredQueues: Set<string> = new Set()
 
   protected registeredJobs: Map<string, new () => Job> = new Map()
 
-  protected config: QueueConfig
-
-  protected options: Record<QueueName, WorkerOptions>
-
   public connection: QueueConnectionName | undefined
 
-  constructor(config: QueueConfig, options: Record<QueueName, WorkerOptions>) {
+  constructor(
+    protected config: QueueConfig,
+    protected options: Record<QueueName, WorkerOptions>,
+    protected driverConfig: Config = {} as Config,
+  ) {
     this.logger = createDefaultLogger('queue')
-    this.config = config
-    this.options = options
   }
 
   public setLogger(logger: Logger): void {

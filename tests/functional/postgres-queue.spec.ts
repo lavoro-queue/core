@@ -1,4 +1,5 @@
 import { Job } from '../../src/queue/contracts/job.js'
+import { PostgresQueueDriver } from '../../src/queue/drivers/postgres.js'
 import { acquireMutex, releaseMutex, waitForMutex } from '../helpers/mutex.js'
 import { TestContext, logger } from '../helpers/test_context.js'
 
@@ -15,7 +16,7 @@ class TestJob extends Job {
 describe('Queue service with disabled worker (PostgreSQL)', () => {
   const ctx = new TestContext()
 
-  ctx.setup([TestJob], 'postgres', {
+  ctx.setup([TestJob], PostgresQueueDriver, {
     // worker: false, // it should be disabled by default
   })
 
@@ -38,7 +39,7 @@ describe(
   () => {
     const ctx = new TestContext()
 
-    ctx.setup([TestJob], 'postgres', {
+    ctx.setup([TestJob], PostgresQueueDriver, {
       worker: true,
     })
 
