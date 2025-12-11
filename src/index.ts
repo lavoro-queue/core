@@ -11,7 +11,7 @@ export {
   type QueuesList,
   type ConnectionQueuesMap,
 } from './queue/contracts/queue_driver.js'
-export { MemoryQueueDriver } from './queue/drivers/memory.js'
-export { PostgresQueueDriver } from './queue/drivers/postgres.js'
+export { memory, type MemoryQueueDriver } from './queue/drivers/memory.js'
+export { postgres, type PostgresQueueDriver } from './queue/drivers/postgres.js'
 
 export { Schedule } from './schedule/schedule.js'

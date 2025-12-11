@@ -2,10 +2,9 @@ import {
   Logger,
   Queue,
   QueueConfig,
-  QueueConnectionConfig,
   QueueConnectionName,
-  QueueDriverType,
   Schedule,
+  postgres,
 } from '../../src/index.js'
 import { Job } from '../../src/queue/contracts/job.js'
 import { QueueDriverStopOptions } from '../../src/queue/contracts/queue_driver.js'
@@ -22,6 +21,8 @@ import pino from 'pino'
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest'
 
 dotenv.config()
+
+type DriverType = 'memory' | 'postgres'
 
 export const logger = pino({
   transport: {
@@ -101,38 +102,43 @@ export class TestContext {
   }
 
   private async getConnectionsConfig(
-    driver: QueueDriverType,
-  ): Promise<Record<QueueConnectionName, QueueConnectionConfig>> {
-    switch (driver) {
-      case 'postgres':
-        logger.debug('Starting PostgreSQL container...')
+    driverType: DriverType,
+  ): Promise<Record<QueueConnectionName, any>> {
+    const driver = await (async () => {
+      switch (driverType) {
+        case 'postgres': {
+          logger.debug('Starting PostgreSQL container...')
 
-        this.postgresContainer = await new PostgreSqlContainer(
-          'postgres:16-alpine',
-        ).start()
+          this.postgresContainer = await new PostgreSqlContainer(
+            'postgres:16-alpine',
+          ).start()
 
-        logger.debug('PostgreSQL container started')
+          logger.debug('PostgreSQL container started')
 
-        return {
-          main: {
-            driver: 'postgres',
-            queues: connections.main.queues,
-            config: this.getPostgresConfig(),
-          },
-          alternative: {
-            driver: 'postgres',
-            queues: connections.alternative.queues,
-            config: this.getPostgresConfig(),
-          },
+          const pgConfig = this.getPostgresConfig()
+          return postgres(pgConfig)
         }
-      default:
-        throw new Error(`Unsupported driver: ${driver}`)
+        default: {
+          throw new Error(`Unsupported driver: ${driverType}`)
+        }
+      }
+    })()
+
+    return {
+      main: {
+        driver,
+        queues: connections.main.queues,
+      },
+      alternative: {
+        driver,
+        queues: connections.alternative.queues,
+      },
     }
   }
 
   async setupQueue(
     jobs: (new () => Job)[] = [],
-    driver: QueueDriverType,
+    driverType: DriverType,
     config?: Partial<QueueConfig>,
   ) {
     if (this.queue) {
@@ -142,7 +148,7 @@ export class TestContext {
     const queueConfig = defineConfig({
       jobs,
       connection: 'main',
-      connections: await this.getConnectionsConfig(driver),
+      connections: await this.getConnectionsConfig(driverType),
       ...(config || {}),
     })
 
@@ -178,11 +184,11 @@ export class TestContext {
    */
   setup(
     jobs: (new () => Job)[] = [],
-    driver: QueueDriverType,
+    driverType: DriverType,
     config?: Partial<QueueConfig>,
   ) {
     beforeAll(async () => {
-      this.queue = await this.setupQueue(jobs, driver, config)
+      this.queue = await this.setupQueue(jobs, driverType, config)
     }, 60 * 1000)
 
     afterAll(async () => {

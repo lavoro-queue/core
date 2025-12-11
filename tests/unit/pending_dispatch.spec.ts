@@ -1,4 +1,5 @@
 import { Job } from '../../src/queue/contracts/job.js'
+import { memory } from '../../src/queue/drivers/memory.js'
 import { defineConfig } from '../../src/queue/define_config.js'
 import { Queue } from '../../src/queue/queue.js'
 
@@ -17,7 +18,7 @@ describe('PendingDispatch', () => {
       connection: 'main',
       connections: {
         main: {
-          driver: 'memory',
+          driver: memory(),
           queues: {
             default: { concurrency: 1 },
             other: { concurrency: 1 },
