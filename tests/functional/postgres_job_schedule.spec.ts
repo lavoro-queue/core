@@ -1,7 +1,7 @@
-import { Job } from '../../src/queue/contracts/job.js'
-import { Schedule } from '../../src/schedule/schedule.js'
 import { TestContext, logger } from '../helpers/test_context.js'
 
+import { Job } from '@lavoro/core'
+import { Schedule } from '@lavoro/core'
 import { parse } from '@lukeed/ms'
 import { describe, expect, test } from 'vitest'
 

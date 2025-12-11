@@ -1,8 +1,14 @@
 {
   "extends": "@adonisjs/tsconfig/tsconfig.package.json",
   "compilerOptions": {
-    "rootDir": "./",
-    "outDir": "./build",
-    "target": "es2015"
-  }
+    "target": "es2015",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true
+  },
+  "references": [
+    { "path": "./packages/core/tsconfig.json" },
+    { "path": "./packages/memory/tsconfig.json" },
+    { "path": "./packages/postgres/tsconfig.json" }
+  ]
 }

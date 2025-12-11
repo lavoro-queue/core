@@ -1,5 +1,6 @@
-import { defineConfig, memory, postgres } from '../../src/index.js'
-
+import { defineConfig } from '@lavoro/core'
+import { memory } from '@lavoro/memory'
+import { postgres } from '@lavoro/postgres'
 import { describe, test } from 'vitest'
 
 describe('DefineConfig', () => {

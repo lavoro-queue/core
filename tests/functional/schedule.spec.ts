@@ -1,6 +1,5 @@
-import { Schedule } from '../../src/schedule/schedule.js'
-import { ScheduleRegistry } from '../../src/schedule/schedule_registry.js'
-
+import { Schedule } from '@lavoro/core'
+import { ScheduleRegistry } from '@lavoro/core'
 import { beforeEach, describe, expect, test } from 'vitest'
 
 describe('Schedule', () => {

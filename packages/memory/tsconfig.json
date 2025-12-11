@@ -1,0 +1,10 @@
+{
+  "extends": "@adonisjs/tsconfig/tsconfig.package.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./build",
+    "target": "es2015",
+    "composite": true
+  },
+  "include": ["src/**/*"]
+}
