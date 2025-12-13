@@ -1,5 +1,5 @@
 import { Job } from '@lavoro/core'
-import { TestContext } from '../helpers/test_context.js'
+import { TestContext } from '../../helpers/test_context.js'
 import knex from 'knex'
 import { describe, expect, test } from 'vitest'
 

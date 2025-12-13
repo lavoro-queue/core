@@ -1,5 +1,5 @@
-import { acquireMutex, releaseMutex, waitForMutex } from '../helpers/mutex.js'
-import { TestContext, logger } from '../helpers/test_context.js'
+import { acquireMutex, releaseMutex, waitForMutex } from '../../helpers/mutex.js'
+import { TestContext, logger } from '../../helpers/test_context.js'
 
 import { Job } from '@lavoro/core'
 import { describe, expect, test } from 'vitest'

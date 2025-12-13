@@ -1,4 +1,4 @@
-import { TestContext, logger } from '../helpers/test_context.js'
+import { TestContext, logger } from '../../helpers/test_context.js'
 
 import { Job } from '@lavoro/core'
 import { Schedule } from '@lavoro/core'
