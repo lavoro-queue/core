@@ -4,12 +4,11 @@ import {
   QueueConfig,
   QueueConnectionName,
   Schedule,
-  postgres,
-} from '../../src/index.js'
-import { Job } from '../../src/queue/contracts/job.js'
-import { QueueDriverStopOptions } from '../../src/queue/contracts/queue_driver.js'
-import { defineConfig } from '../../src/queue/define_config.js'
-import { PostgresConfig } from '../../src/queue/drivers/postgres.js'
+  Job,
+  QueueDriverStopOptions,
+  defineConfig,
+} from '@lavoro/core'
+import { postgres, type PostgresConfig } from '@lavoro/postgres'
 
 import {
   PostgreSqlContainer,
@@ -214,11 +213,8 @@ type ConnectionQueuesMapType = {
   [K in ConnectionNames]: keyof (typeof connections)[K]['queues']
 }
 
-declare module '../../src/queue/types.js' {
+declare module '@lavoro/core' {
   export interface QueueConnections extends Record<ConnectionNames, never> {}
-}
-
-declare module '../../src/queue/contracts/queue_driver.js' {
   export interface QueuesList extends Record<AllQueueNames, never> {}
   export interface ConnectionQueuesMap extends ConnectionQueuesMapType {}
 }

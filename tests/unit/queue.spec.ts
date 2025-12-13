@@ -1,8 +1,7 @@
-import { Job } from '../../src/queue/contracts/job.js'
-import { memory } from '../../src/queue/drivers/memory.js'
-import { defineConfig } from '../../src/queue/define_config.js'
-import { Queue } from '../../src/queue/queue.js'
-
+import { Job } from '@lavoro/core'
+import { defineConfig } from '@lavoro/core'
+import { Queue } from '@lavoro/core'
+import { memory } from '@lavoro/memory'
 import { describe, expect, test } from 'vitest'
 
 class TestJob extends Job {
